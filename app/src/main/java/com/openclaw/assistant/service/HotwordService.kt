@@ -14,9 +14,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.openclaw.assistant.MainActivity
 import com.openclaw.assistant.R
-import com.openclaw.assistant.api.OpenClawClient
 import com.openclaw.assistant.data.SettingsRepository
-import com.openclaw.assistant.speech.TTSManager
 import kotlinx.coroutines.*
 import org.vosk.Model
 import org.vosk.Recognizer
@@ -59,7 +57,6 @@ class HotwordService : Service(), VoskRecognitionListener {
     private var speechService: SpeechService? = null
     
     private lateinit var settings: SettingsRepository
-    private lateinit var ttsManager: TTSManager
 
     private var isListeningForCommand = false
     private var isSessionActive = false
@@ -99,7 +96,6 @@ class HotwordService : Service(), VoskRecognitionListener {
     override fun onCreate() {
         super.onCreate()
         settings = SettingsRepository.getInstance(this)
-        ttsManager = TTSManager(this)
         
         createNotificationChannel()
         
@@ -129,7 +125,6 @@ class HotwordService : Service(), VoskRecognitionListener {
         } catch (e: Exception) {}
         scope.cancel()
         speechService?.shutdown()
-        ttsManager.shutdown()
     }
 
     private fun createNotificationChannel() {
@@ -236,7 +231,7 @@ class HotwordService : Service(), VoskRecognitionListener {
             val json = JSONObject(it)
             val text = json.optString("text", "")
             if (text.contains("open claw") || text.contains("hey claw")) {
-                Log.d(TAG, "Hotword detected: $text")
+                Log.e(TAG, "Hotword detected! Text: $text") // Use Log.e for better visibility in some logcat filters
                 onHotwordDetected()
             }
         }
@@ -266,7 +261,7 @@ class HotwordService : Service(), VoskRecognitionListener {
         isListeningForCommand = true
         isSessionActive = true
 
-        Log.d(TAG, "Hotword Detected! Launching Assistant UI...")
+        Log.d(TAG, "Hotword Detected! Triggering Assistant Overlay...")
 
         // Ensure speechService is safely stopped
         speechService?.let {
@@ -281,21 +276,12 @@ class HotwordService : Service(), VoskRecognitionListener {
 
         scope.launch {
             delay(100) // Wait for resource release
-            ttsManager.speak("Yes")
-            delay(300) // Reduced from 500ms
 
-            val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION
+            val intent = Intent(this@HotwordService, OpenClawAssistantService::class.java).apply {
+                action = OpenClawAssistantService.ACTION_SHOW_ASSISTANT
             }
-            try {
-                startActivity(intent)
-            } catch (e: Exception) {
-                Log.e(TAG, "Launch failed", e)
-                // Reset both flags on failure
-                isSessionActive = false
-                isListeningForCommand = false
-                resumeHotwordDetection()
-            }
+            startService(intent)
+            Log.e(TAG, "startService ACTION_SHOW_ASSISTANT called")
         }
     }
 

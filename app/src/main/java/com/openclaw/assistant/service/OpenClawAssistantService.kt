@@ -1,9 +1,11 @@
 package com.openclaw.assistant.service
 
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import android.service.voice.VoiceInteractionService
 import android.service.voice.VoiceInteractionSession
@@ -18,47 +20,90 @@ class OpenClawAssistantService : VoiceInteractionService() {
 
     companion object {
         private const val TAG = "OpenClawAssistantSvc"
-        const val ACTION_DEBUG_SHOW_SESSION = "com.openclaw.assistant.DEBUG_SHOW_SESSION"
+        const val ACTION_SHOW_ASSISTANT = "com.openclaw.assistant.ACTION_SHOW_ASSISTANT"
     }
+
+    private var isServiceReady = false
+    private var pendingShowSession = false
 
     private val debugReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            Log.d(TAG, "Debug receiver triggered: ${intent?.action}")
-            if (intent?.action == ACTION_DEBUG_SHOW_SESSION) {
-                try {
-                    showSession(Bundle(), 0)
-                    Log.d(TAG, "showSession() called via debug trigger")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to call showSession via debug trigger", e)
-                }
+            Log.e(TAG, "Assistant trigger receiver triggered: ${intent?.action}")
+            if (intent?.action == ACTION_SHOW_ASSISTANT) {
+                triggerShowSession()
             }
         }
     }
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "VoiceInteractionService onCreate")
-        val filter = IntentFilter(ACTION_DEBUG_SHOW_SESSION)
-        registerReceiver(debugReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        Log.e(TAG, "VoiceInteractionService onCreate")
+        val filter = IntentFilter(ACTION_SHOW_ASSISTANT)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(debugReceiver, filter, Context.RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(debugReceiver, filter)
+        }
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent == null) {
+            Log.d(TAG, "onStartCommand received: null (system restart)")
+            return START_STICKY
+        }
+        
+        val action = intent.action
+        Log.e(TAG, "onStartCommand received: $action")
+        if (action == ACTION_SHOW_ASSISTANT) {
+            triggerShowSession()
+        }
+        return START_STICKY
+    }
+
+    override fun onBind(intent: Intent?): android.os.IBinder? {
+        Log.e(TAG, "onBind received: ${intent?.action}")
+        return super.onBind(intent)
+    }
+
+    private fun triggerShowSession() {
+        val compName = ComponentName(this, OpenClawAssistantService::class.java)
+        val isActive = isActiveService(this, compName)
+        Log.e(TAG, "triggerShowSession: isServiceReady=$isServiceReady, isActiveService=$isActive")
+        
+        if (isServiceReady) {
+            try {
+                val args = Bundle()
+                showSession(args, VoiceInteractionSession.SHOW_WITH_ASSIST)
+                Log.e(TAG, "showSession() called immediately")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to call showSession immediately", e)
+            }
+        } else {
+            Log.e(TAG, "Service not ready. Queuing showSession request.")
+            pendingShowSession = true
+        }
     }
 
     override fun onReady() {
         super.onReady()
-        Log.d(TAG, "VoiceInteractionService onReady")
+        Log.e(TAG, "VoiceInteractionService onReady")
+        isServiceReady = true
+        if (pendingShowSession) {
+            pendingShowSession = false
+            try {
+                val args = Bundle()
+                showSession(args, VoiceInteractionSession.SHOW_WITH_ASSIST)
+                Log.e(TAG, "showSession() called from onReady (pending)")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to call pending showSession", e)
+            }
+        }
     }
 
     override fun onShutdown() {
         super.onShutdown()
-        Log.d(TAG, "VoiceInteractionService onShutdown")
+        Log.e(TAG, "VoiceInteractionService onShutdown")
+        isServiceReady = false
         unregisterReceiver(debugReceiver)
-    }
-}
-
-/**
- * Voice Interaction Session Service
- */
-class OpenClawAssistantSessionService : VoiceInteractionSessionService() {
-    override fun onNewSession(args: Bundle?): VoiceInteractionSession {
-        return OpenClawSession(this)
     }
 }

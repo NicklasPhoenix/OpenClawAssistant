@@ -505,9 +505,10 @@ fun TroubleshootingDialog(onDismiss: () -> Unit) {
                 val context = LocalContext.current
                 Button(
                     onClick = {
-                        val intent = Intent(OpenClawAssistantService.ACTION_DEBUG_SHOW_SESSION)
-                        intent.setPackage(context.packageName)
-                        context.sendBroadcast(intent)
+                        val intent = Intent(context, OpenClawAssistantService::class.java).apply {
+                            action = OpenClawAssistantService.ACTION_SHOW_ASSISTANT
+                        }
+                        context.startService(intent)
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)

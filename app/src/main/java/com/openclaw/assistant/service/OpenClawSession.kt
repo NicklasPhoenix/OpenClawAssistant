@@ -29,17 +29,25 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.openclaw.assistant.api.OpenClawClient
+import android.os.Build
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.painterResource
+import com.openclaw.assistant.R
 import com.openclaw.assistant.data.SettingsRepository
+import com.openclaw.assistant.api.OpenClawClient
 import com.openclaw.assistant.speech.SpeechRecognizerManager
-import com.openclaw.assistant.speech.SpeechResult
 import com.openclaw.assistant.speech.TTSManager
+import com.openclaw.assistant.speech.SpeechResult
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
-import android.os.Build
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
+import com.openclaw.assistant.ui.theme.OpenClawAssistantTheme
 
 /**
  * Voice Interaction Session
@@ -68,10 +76,17 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
     private var errorMessage = mutableStateOf<String?>(null)
 
     override fun onCreate() {
-        Log.d(TAG, "Session onCreate")
+        Log.e(TAG, "Session onCreate start")
         super.onCreate()
+        
+        // Initialize lifecycle and saved state here (once per session lifetime)
+        savedStateRegistryController.performAttach()
+        savedStateRegistryController.performRestore(null)
+        lifecycleRegistry.handleLifecycleEvent(androidx.lifecycle.Lifecycle.Event.ON_CREATE)
+
         speechManager = SpeechRecognizerManager(context)
         ttsManager = TTSManager(context)
+        Log.e(TAG, "Session onCreate completed")
     }
 
     private val lifecycleRegistry = androidx.lifecycle.LifecycleRegistry(this)
@@ -90,13 +105,9 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
         get() = savedStateRegistryController.savedStateRegistry
 
     override fun onCreateContentView(): View {
-        Log.d(TAG, "Session onCreateContentView")
-        // Initialize lifecycle and saved state
-        savedStateRegistryController.performAttach()
-        savedStateRegistryController.performRestore(null)
-        lifecycleRegistry.handleLifecycleEvent(androidx.lifecycle.Lifecycle.Event.ON_CREATE)
-
+        Log.e(TAG, "Session onCreateContentView")
         val composeView = ComposeView(context).apply {
+            Log.e(TAG, "Initializing ComposeView with owners")
             // Set ViewTree owners using extensions
             setViewTreeLifecycleOwner(this@OpenClawSession)
             setViewTreeViewModelStoreOwner(this@OpenClawSession)
@@ -125,8 +136,6 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
         
         // PAUSE Hotword Service to prevent microphone conflict
         sendPauseBroadcast()
-        
-        // ... rest of onShow ...
         
         // 設定チェック
         if (!settings.isConfigured()) {
@@ -168,7 +177,6 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
 
     private fun sendPauseBroadcast() {
         val intent = Intent("com.openclaw.assistant.ACTION_PAUSE_HOTWORD")
-        // Explicit package set for security if preferred, but implicit is fine for local broadcast
         intent.setPackage(context.packageName)
         context.sendBroadcast(intent)
     }
@@ -263,7 +271,7 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
 
     private fun sendToOpenClaw(message: String) {
         currentState.value = AssistantState.THINKING
-        displayText.value = "" // Clear text to avoid duplication with status "Thinking..."
+        displayText.value = "Thinking..."
 
         scope.launch {
             val result = apiClient.sendMessage(
@@ -315,7 +323,7 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
             if (success) {
                 // 読み上げ完了後、連続会話モードが有効なら再度リスニング開始
                 if (settings.continuousMode) {
-                    delay(500) // Reduced from 1000ms since AudioFocus is now properly released
+                    delay(500)
                     startListening()
                 }
             } else {
