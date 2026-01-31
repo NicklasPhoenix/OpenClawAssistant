@@ -73,11 +73,18 @@ class TTSManager(context: Context) {
             tts?.setOnUtteranceProgressListener(listener)
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
         } else {
-            // 初期化待ち
+            // 初期化待ち - Listenerを保持してpendingSpeakで使用
             pendingSpeak = {
                 tts?.setOnUtteranceProgressListener(listener)
                 tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
             }
+            // 初期化タイムアウト処理（3秒待っても初期化されなければfalseを返す）
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                if (continuation.isActive && !isInitialized) {
+                    pendingSpeak = null
+                    continuation.resume(false)
+                }
+            }, 3000)
         }
 
         continuation.invokeOnCancellation {

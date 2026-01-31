@@ -80,32 +80,37 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun startListening() {
         if (_uiState.value.isListening) return
-        
+
         lastInputWasVoice = true // Mark as voice input
-        listeningJob?.cancel() // Cancel existing
-        
+
+        // Cancel existing and wait for cleanup
+        listeningJob?.cancel()
+
         // Stop TTS if speaking
         ttsManager.stop()
 
-        _uiState.update { it.copy(isListening = true, partialText = "") }
+        // Wait for TTS resource release before starting mic
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(500) // Wait for TTS to release resources
 
-        listeningJob = viewModelScope.launch {
-            speechManager.startListening("ja-JP").collect { result ->
-                when (result) {
-                    is SpeechResult.PartialResult -> {
-                        _uiState.update { it.copy(partialText = result.text) }
+            _uiState.update { it.copy(isListening = true, partialText = "") }
+
+            listeningJob = viewModelScope.launch {
+                speechManager.startListening("ja-JP").collect { result ->
+                    when (result) {
+                        is SpeechResult.PartialResult -> {
+                            _uiState.update { it.copy(partialText = result.text) }
+                        }
+                        is SpeechResult.Result -> {
+                            _uiState.update { it.copy(isListening = false, partialText = "") }
+                            sendMessage(result.text)
+                        }
+                        is SpeechResult.Error -> {
+                            _uiState.update { it.copy(isListening = false, error = result.message) }
+                            lastInputWasVoice = false
+                        }
+                        else -> {}
                     }
-                    is SpeechResult.Result -> {
-                        _uiState.update { it.copy(isListening = false, partialText = "") }
-                        sendMessage(result.text)
-                    }
-                    is SpeechResult.Error -> {
-                        _uiState.update { it.copy(isListening = false, error = result.message) }
-                        // Only stop loop on fatal errors? Or restart?
-                        // For now, let's treat error as stop
-                        lastInputWasVoice = false 
-                    }
-                    else -> {}
                 }
             }
         }
@@ -122,14 +127,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.update { it.copy(isSpeaking = true) }
             val success = ttsManager.speak(text)
             _uiState.update { it.copy(isSpeaking = false) }
-            
+
             // If it was a voice conversation, continue listening
             if (success && lastInputWasVoice) {
-                // Wait for TTS to fully release audio focus
-                kotlinx.coroutines.delay(800)
-                
+                // Explicit cleanup and wait for TTS to fully release audio focus
+                speechManager.destroy()
+                kotlinx.coroutines.delay(1000) // Increased from 800ms for more reliable cleanup
+
                 // Restart listening
-                startListening() 
+                startListening()
             }
         }
     }

@@ -35,6 +35,7 @@ import com.openclaw.assistant.speech.SpeechResult
 import com.openclaw.assistant.speech.TTSManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
+import android.os.Build
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
@@ -76,6 +77,9 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
     
     // Audio Cue
     private val toneGenerator = android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 100)
+
+    // AudioFocus management
+    private var audioFocusRequest: android.media.AudioFocusRequest? = null
 
     override val lifecycle: androidx.lifecycle.Lifecycle
         get() = lifecycleRegistry
@@ -137,7 +141,9 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
         super.onHide()
         lifecycleRegistry.handleLifecycleEvent(androidx.lifecycle.Lifecycle.Event.ON_PAUSE)
         lifecycleRegistry.handleLifecycleEvent(androidx.lifecycle.Lifecycle.Event.ON_STOP)
-        
+
+        // Clean up audio resources
+        abandonAudioFocus()
         scope.cancel()
         speechManager.destroy()
         ttsManager.stop()
@@ -187,12 +193,22 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
         errorMessage.value = null
 
         listeningJob = scope.launch {
-            // Request audio focus
-            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-            audioManager.requestAudioFocus(null, android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-
             // Ensure previous resources are cleaned up
-            delay(200)
+            delay(300)
+
+            // Request audio focus properly for API 26+
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                audioFocusRequest = android.media.AudioFocusRequest.Builder(
+                    android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
+                ).build()
+                audioManager.requestAudioFocus(audioFocusRequest!!)
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.requestAudioFocus(null,
+                    android.media.AudioManager.STREAM_VOICE_CALL,
+                    android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+            }
             
             speechManager.startListening("ja-JP").collectLatest { result ->
                 when (result) {
@@ -224,9 +240,11 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
                     }
                     is SpeechResult.Error -> {
                         Log.e(TAG, "Speech error: ${result.message}")
-                        
+
                         if (result.message.contains("ビジー")) {
-                             delay(500)
+                             // Longer delay and explicit cleanup before retry
+                             speechManager.destroy()
+                             delay(1000)
                              startListening() // Auto-retry
                         } else {
                             currentState.value = AssistantState.ERROR
@@ -278,9 +296,13 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
 
         scope.launch {
             val success = ttsManager.speak(text)
+
+            // Abandon audio focus after TTS completes
+            abandonAudioFocus()
+
             if (success) {
                 // 読み上げ完了後、連続会話のため再度リスニング開始
-                delay(1000)
+                delay(500) // Reduced from 1000ms since AudioFocus is now properly released
                 startListening()
             } else {
                 currentState.value = AssistantState.ERROR
@@ -289,7 +311,16 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
         }
     }
 
-    // Removed duplicates as they are now handled in the main block above
+    private fun abandonAudioFocus() {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            audioFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.abandonAudioFocus(null)
+        }
+        audioFocusRequest = null
+    }
 }
 
 /**

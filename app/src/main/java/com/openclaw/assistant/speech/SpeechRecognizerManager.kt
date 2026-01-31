@@ -35,13 +35,19 @@ class SpeechRecognizerManager(private val context: Context) {
             return@callbackFlow
         }
 
-        // Clean slate: Ensure any previous instance is destroyed
-        try {
-            recognizer?.destroy()
-        } catch (e: Exception) {
-            // Ignore
+        // Clean slate: Ensure any previous instance is safely destroyed
+        recognizer?.let { rec ->
+            try {
+                rec.cancel()
+                rec.destroy()
+            } catch (e: Exception) {
+                // Ignore
+            }
+            recognizer = null
         }
-        recognizer = null
+
+        // Wait for Android to release internal resources (critical for 2nd+ invocations)
+        kotlinx.coroutines.delay(300)
 
         // Use application context to avoid activity/service lifecycle leaks
         val appContext = context.applicationContext

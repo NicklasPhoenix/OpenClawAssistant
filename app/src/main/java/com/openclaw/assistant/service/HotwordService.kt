@@ -77,7 +77,19 @@ class HotwordService : Service(), VoskRecognitionListener {
                 }
                 ACTION_RESUME_HOTWORD -> {
                     Log.d(TAG, "Resume signal received")
+                    // Reset both flags to ensure clean state
                     isSessionActive = false
+                    isListeningForCommand = false
+
+                    // Ensure speechService is cleaned up
+                    speechService?.let {
+                        try {
+                            it.stop()
+                            it.shutdown()
+                        } catch (e: Exception) { /* ignore */ }
+                    }
+                    speechService = null
+
                     resumeHotwordDetection()
                 }
             }
@@ -250,28 +262,40 @@ class HotwordService : Service(), VoskRecognitionListener {
     }
 
     private fun onHotwordDetected() {
-        if (isListeningForCommand) return
+        if (isListeningForCommand || isSessionActive) return
         isListeningForCommand = true
-        isSessionActive = true 
+        isSessionActive = true
 
         Log.d(TAG, "Hotword Detected! Launching Assistant UI...")
-        speechService?.stop()
-        speechService?.shutdown()
+
+        // Ensure speechService is safely stopped
+        speechService?.let {
+            try {
+                it.stop()
+                it.shutdown()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to stop speech service", e)
+            }
+        }
         speechService = null
 
         scope.launch {
-             ttsManager.speak("Yes")
-             delay(500) 
-             val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
-                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION
-             }
-             try {
-                 startActivity(intent)
-             } catch (e: Exception) {
-                 Log.e(TAG, "Launch failed", e)
-                 isSessionActive = false
-                 resumeHotwordDetection()
-             }
+            delay(100) // Wait for resource release
+            ttsManager.speak("Yes")
+            delay(300) // Reduced from 500ms
+
+            val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION
+            }
+            try {
+                startActivity(intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Launch failed", e)
+                // Reset both flags on failure
+                isSessionActive = false
+                isListeningForCommand = false
+                resumeHotwordDetection()
+            }
         }
     }
 
