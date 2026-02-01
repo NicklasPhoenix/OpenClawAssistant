@@ -11,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -23,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -136,6 +138,7 @@ fun MainScreen(
     var hotwordEnabled by remember { mutableStateOf(settings.hotwordEnabled) }
     var isAssistantSet by remember { mutableStateOf((context as? MainActivity)?.isAssistantActive() ?: false) }
     var showTroubleshooting by remember { mutableStateOf(false) }
+    var showHowToUse by remember { mutableStateOf(false) }
     
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -158,6 +161,9 @@ fun MainScreen(
             TopAppBar(
                 title = { Text("OpenClaw Assistant") },
                 actions = {
+                    IconButton(onClick = { showHowToUse = true }) {
+                        Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = "Help")
+                    }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
@@ -178,7 +184,7 @@ fun MainScreen(
             
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Quick actions
+            // Quick actions - 2 cards side by side
             Text(
                 text = "Activation Methods",
                 fontSize = 18.sp,
@@ -188,64 +194,59 @@ fun MainScreen(
             
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Home button long press
-            ActionCard(
-                icon = Icons.Default.Home,
-                title = "Long Press Home Button",
-                description = if (isAssistantSet) "System Assistant: Active" else "System Assistant: Not Configured",
-                isHighlight = !isAssistantSet,
-                actionText = "Open Settings",
-                onClick = onOpenAssistantSettings,
-                showInfo = true,
-                onInfoClick = { showTroubleshooting = true }
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Home button long press
+                CompactActionCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Home,
+                    title = "Home Button",
+                    description = if (isAssistantSet) "Active" else "Not Set",
+                    isActive = isAssistantSet,
+                    onClick = onOpenAssistantSettings,
+                    showInfoIcon = true,
+                    onInfoClick = { showTroubleshooting = true }
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Hotword
-            ActionCard(
-                icon = Icons.Default.Mic,
-                title = "Wake Word \"OpenClaw\"",
-                description = if (hotwordEnabled) "Say \"Open Claw\" to activate" else "Tap to enable",
-                showSwitch = true,
-                switchValue = hotwordEnabled,
-                onSwitchChange = { enabled ->
-                    if (enabled && !isConfigured) {
-                        return@ActionCard
+                // Hotword
+                CompactActionCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Default.Mic,
+                    title = settings.getWakeWordDisplayName(),
+                    description = if (hotwordEnabled) "Active" else "Disabled",
+                    isActive = hotwordEnabled,
+                    showSwitch = true,
+                    switchValue = hotwordEnabled,
+                    onSwitchChange = { enabled ->
+                        if (enabled && !isConfigured) {
+                            return@CompactActionCard
+                        }
+                        hotwordEnabled = enabled
+                        onToggleHotword(enabled)
                     }
-                    hotwordEnabled = enabled
-                    onToggleHotword(enabled)
-                }
-            )
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // How to use
-            Text(
-                text = "How to Use",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-
-            UsageCard()
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Manual Chat
-            val context = LocalContext.current
-            ActionCard(
-                icon = Icons.AutoMirrored.Filled.Chat,
-                title = "In-App Chat",
-                description = "Text & Voice Conversation",
-                actionText = "Open Chat",
+            // Open Chat - Large button
+            val chatContext = LocalContext.current
+            Button(
                 onClick = {
-                    val intent = Intent(context, ChatActivity::class.java)
-                    context.startActivity(intent)
-                }
-            )
+                    val intent = Intent(chatContext, ChatActivity::class.java)
+                    chatContext.startActivity(intent)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text("Open Chat", fontSize = 18.sp, fontWeight = FontWeight.Medium)
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -261,6 +262,10 @@ fun MainScreen(
 
     if (showTroubleshooting) {
         TroubleshootingDialog(onDismiss = { showTroubleshooting = false })
+    }
+
+    if (showHowToUse) {
+        HowToUseDialog(onDismiss = { showHowToUse = false })
     }
 }
 
@@ -459,6 +464,100 @@ fun WarningCard(message: String, onClick: () -> Unit) {
             )
         }
     }
+}
+
+@Composable
+fun CompactActionCard(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    title: String,
+    description: String,
+    isActive: Boolean = false,
+    onClick: (() -> Unit)? = null,
+    showSwitch: Boolean = false,
+    switchValue: Boolean = false,
+    onSwitchChange: ((Boolean) -> Unit)? = null,
+    showInfoIcon: Boolean = false,
+    onInfoClick: (() -> Unit)? = null
+) {
+    Card(
+        modifier = modifier,
+        onClick = { onClick?.invoke() },
+        enabled = onClick != null && !showSwitch
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray,
+                    modifier = Modifier.size(28.dp)
+                )
+                if (showInfoIcon) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.HelpOutline,
+                        contentDescription = "Help",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable { onInfoClick?.invoke() }
+                    )
+                }
+                if (showSwitch) {
+                    Switch(
+                        checked = switchValue,
+                        onCheckedChange = onSwitchChange,
+                        modifier = Modifier.scale(0.8f)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = title,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            Text(
+                text = description,
+                fontSize = 12.sp,
+                color = if (isActive) Color(0xFF4CAF50) else Color.Gray,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun HowToUseDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("How to Use") },
+        text = {
+            Column {
+                UsageStep(number = "1", text = "Long press Home or say Wake Word")
+                UsageStep(number = "2", text = "Ask your question or request")
+                UsageStep(number = "3", text = "OpenClaw reads the response aloud")
+                UsageStep(number = "4", text = "Continue conversation (session maintained)")
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Got it")
+            }
+        }
+    )
 }
 
 @Composable
