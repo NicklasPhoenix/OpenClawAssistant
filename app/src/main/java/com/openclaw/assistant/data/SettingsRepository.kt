@@ -53,6 +53,43 @@ class SettingsRepository(context: Context) {
         get() = prefs.getBoolean(KEY_HOTWORD_ENABLED, false)
         set(value) = prefs.edit().putBoolean(KEY_HOTWORD_ENABLED, value).apply()
 
+    // Wake word selection (preset or custom)
+    var wakeWordPreset: String
+        get() = prefs.getString(KEY_WAKE_WORD_PRESET, WAKE_WORD_OPEN_CLAW) ?: WAKE_WORD_OPEN_CLAW
+        set(value) = prefs.edit().putString(KEY_WAKE_WORD_PRESET, value).apply()
+
+    // Custom wake word (when preset is "custom")
+    var customWakeWord: String
+        get() = prefs.getString(KEY_CUSTOM_WAKE_WORD, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_CUSTOM_WAKE_WORD, value).apply()
+
+    // Get the actual wake words list for Vosk
+    fun getWakeWords(): List<String> {
+        return when (wakeWordPreset) {
+            WAKE_WORD_OPEN_CLAW -> listOf("open claw", "hey claw", "okay claw")
+            WAKE_WORD_HEY_ASSISTANT -> listOf("hey assistant", "okay assistant")
+            WAKE_WORD_JARVIS -> listOf("jarvis", "hey jarvis")
+            WAKE_WORD_COMPUTER -> listOf("computer", "hey computer")
+            WAKE_WORD_CUSTOM -> {
+                val custom = customWakeWord.trim().lowercase()
+                if (custom.isNotEmpty()) listOf(custom) else listOf("open claw")
+            }
+            else -> listOf("open claw")
+        }
+    }
+
+    // Get display name for current wake word
+    fun getWakeWordDisplayName(): String {
+        return when (wakeWordPreset) {
+            WAKE_WORD_OPEN_CLAW -> "OpenClaw"
+            WAKE_WORD_HEY_ASSISTANT -> "Hey Assistant"
+            WAKE_WORD_JARVIS -> "Jarvis"
+            WAKE_WORD_COMPUTER -> "Computer"
+            WAKE_WORD_CUSTOM -> customWakeWord.ifEmpty { "Custom" }
+            else -> "OpenClaw"
+        }
+    }
+
     // TTS enabled
     var ttsEnabled: Boolean
         get() = prefs.getBoolean(KEY_TTS_ENABLED, true) // Default true as per user request
@@ -89,9 +126,18 @@ class SettingsRepository(context: Context) {
         private const val KEY_AUTH_TOKEN = "auth_token"
         private const val KEY_SESSION_ID = "session_id"
         private const val KEY_HOTWORD_ENABLED = "hotword_enabled"
+        private const val KEY_WAKE_WORD_PRESET = "wake_word_preset"
+        private const val KEY_CUSTOM_WAKE_WORD = "custom_wake_word"
         private const val KEY_IS_VERIFIED = "is_verified"
         private const val KEY_TTS_ENABLED = "tts_enabled"
         private const val KEY_CONTINUOUS_MODE = "continuous_mode"
+
+        // Wake word presets
+        const val WAKE_WORD_OPEN_CLAW = "open_claw"
+        const val WAKE_WORD_HEY_ASSISTANT = "hey_assistant"
+        const val WAKE_WORD_JARVIS = "jarvis"
+        const val WAKE_WORD_COMPUTER = "computer"
+        const val WAKE_WORD_CUSTOM = "custom"
 
 
 

@@ -214,7 +214,12 @@ class HotwordService : Service(), VoskRecognitionListener {
     private fun startHotwordListening() {
         if (model == null || isSessionActive) return
         try {
-            val rec = Recognizer(model, SAMPLE_RATE, "[\"open claw\", \"hey claw\", \"okay claw\"]")
+            // Get wake words from settings
+            val wakeWords = settings.getWakeWords()
+            val wakeWordsJson = wakeWords.joinToString("\", \"", "[\"", "\"]")
+            Log.d(TAG, "Starting hotword detection with words: $wakeWordsJson")
+            
+            val rec = Recognizer(model, SAMPLE_RATE, wakeWordsJson)
             speechService = SpeechService(rec, SAMPLE_RATE)
             speechService?.startListening(this)
             Log.d(TAG, "Hotword listening started")
@@ -230,8 +235,13 @@ class HotwordService : Service(), VoskRecognitionListener {
         hypothesis?.let {
             val json = JSONObject(it)
             val text = json.optString("text", "")
-            if (text.contains("open claw") || text.contains("hey claw")) {
-                Log.e(TAG, "Hotword detected! Text: $text") // Use Log.e for better visibility in some logcat filters
+            
+            // Check against configured wake words
+            val wakeWords = settings.getWakeWords()
+            val detected = wakeWords.any { word -> text.contains(word) }
+            
+            if (detected) {
+                Log.e(TAG, "Hotword detected! Text: $text")
                 onHotwordDetected()
             }
         }

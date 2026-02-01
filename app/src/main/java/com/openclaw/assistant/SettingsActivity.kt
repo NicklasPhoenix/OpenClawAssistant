@@ -61,8 +61,11 @@ fun SettingsScreen(
     var authToken by remember { mutableStateOf(settings.authToken) }
     var ttsEnabled by remember { mutableStateOf(settings.ttsEnabled) }
     var continuousMode by remember { mutableStateOf(settings.continuousMode) }
+    var wakeWordPreset by remember { mutableStateOf(settings.wakeWordPreset) }
+    var customWakeWord by remember { mutableStateOf(settings.customWakeWord) }
     
     var showAuthToken by remember { mutableStateOf(false) }
+    var showWakeWordMenu by remember { mutableStateOf(false) }
     
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -70,6 +73,15 @@ fun SettingsScreen(
     
     var isTesting by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<TestResult?>(null) }
+
+    // Wake word options
+    val wakeWordOptions = listOf(
+        SettingsRepository.WAKE_WORD_OPEN_CLAW to "OpenClaw",
+        SettingsRepository.WAKE_WORD_HEY_ASSISTANT to "Hey Assistant",
+        SettingsRepository.WAKE_WORD_JARVIS to "Jarvis",
+        SettingsRepository.WAKE_WORD_COMPUTER to "Computer",
+        SettingsRepository.WAKE_WORD_CUSTOM to "Custom..."
+    )
 
     Scaffold(
         topBar = {
@@ -87,6 +99,8 @@ fun SettingsScreen(
                             settings.authToken = authToken
                             settings.ttsEnabled = ttsEnabled
                             settings.continuousMode = continuousMode
+                            settings.wakeWordPreset = wakeWordPreset
+                            settings.customWakeWord = customWakeWord
                             onSave()
                         },
                         enabled = webhookUrl.isNotBlank() && !isTesting
@@ -191,6 +205,80 @@ fun SettingsScreen(
                             Text("Auto-start mic after AI speaks", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         }
                         Switch(checked = continuousMode, onCheckedChange = { continuousMode = it })
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Wake Word Settings
+            Text(
+                text = "Wake Word",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    // Wake Word Dropdown
+                    ExposedDropdownMenuBox(
+                        expanded = showWakeWordMenu,
+                        onExpandedChange = { showWakeWordMenu = it }
+                    ) {
+                        OutlinedTextField(
+                            value = wakeWordOptions.find { it.first == wakeWordPreset }?.second ?: "OpenClaw",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Activation Phrase") },
+                            leadingIcon = { Icon(Icons.Default.Mic, contentDescription = null) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showWakeWordMenu) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor()
+                        )
+                        
+                        ExposedDropdownMenu(
+                            expanded = showWakeWordMenu,
+                            onDismissRequest = { showWakeWordMenu = false }
+                        ) {
+                            wakeWordOptions.forEach { (value, label) ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    onClick = {
+                                        wakeWordPreset = value
+                                        showWakeWordMenu = false
+                                    },
+                                    leadingIcon = {
+                                        if (wakeWordPreset == value) {
+                                            Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    
+                    // Custom Wake Word Input (shown when Custom is selected)
+                    if (wakeWordPreset == SettingsRepository.WAKE_WORD_CUSTOM) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = customWakeWord,
+                            onValueChange = { customWakeWord = it.lowercase() },
+                            label = { Text("Custom Wake Word") },
+                            placeholder = { Text("e.g., hey buddy") },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            supportingText = {
+                                Text("Enter 2-3 words, all lowercase", color = Color.Gray, fontSize = 12.sp)
+                            }
+                        )
                     }
                 }
             }
