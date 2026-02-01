@@ -8,16 +8,17 @@
 
 ## ✨ 機能
 
-- 🎤 **ウェイクワード「OpenClaw」** - 音声だけでハンズフリー起動
+- 🎤 **カスタマイズ可能なウェイクワード** - 「Open Claw」「Jarvis」など選択可能、または自由入力
 - 🏠 **ホームボタン長押し** - システムアシスタントとして動作
 - 🔄 **連続会話モード** - セッションを維持して自然な対話
 - 🔊 **音声読み上げ** - AIの応答を自動で読み上げ
 - 💬 **In-App Chat** - テキスト＆音声のハイブリッド入力
 - 🔒 **プライバシー重視** - 設定は暗号化保存
+- 📴 **オフライン対応のウェイクワード検知** - Voskによるローカル処理
 
 ## 📱 使い方
 
-1. **ホームボタン長押し** または **「OpenClaw」** と話しかける
+1. **ホームボタン長押し** または **ウェイクワード** を話す
 2. 質問やリクエストを話す
 3. OpenClawが音声で応答
 4. 会話を続ける（セッション維持）
@@ -38,13 +39,18 @@
 
 ### 3. ウェイクワードの設定
 
-1. [Picovoice Console](https://console.picovoice.ai) で無料アカウント作成
-2. **Access Key** を取得して設定画面に入力
-3. アプリでWake Wordトグルをオンに
+1. 設定画面の「Wake Word」セクションを開く
+2. プリセットから選択：
+   - **Open Claw** (デフォルト)
+   - **Hey Assistant**
+   - **Jarvis**
+   - **Computer**
+   - **Custom...** (自由入力)
+3. ホーム画面でWake Wordトグルをオンに
 
 ### 4. システムアシスタントとして設定
 
-1. アプリの「Open Settings」をタップ
+1. アプリの「Home Button」カードをタップ
 2. または: 端末の設定 → アプリ → デフォルトアプリ → デジタルアシスタント
 3. 「OpenClaw Assistant」を選択
 4. ホームボタン長押しで起動可能に
@@ -89,7 +95,7 @@ Authorization: Bearer <token>
 - **UI**: Kotlin + Jetpack Compose + Material 3
 - **音声認識**: Android SpeechRecognizer
 - **音声合成**: Android TextToSpeech
-- **ホットワード**: Picovoice Porcupine
+- **ウェイクワード検知**: [Vosk](https://alphacephei.com/vosk/) (オフライン対応)
 - **システム連携**: VoiceInteractionService
 - **通信**: OkHttp + Gson
 - **セキュリティ**: EncryptedSharedPreferences
@@ -98,7 +104,7 @@ Authorization: Bearer <token>
 
 | 権限 | 用途 |
 |------|------|
-| `RECORD_AUDIO` | 音声認識 |
+| `RECORD_AUDIO` | 音声認識・ウェイクワード検知 |
 | `INTERNET` | API通信 |
 | `FOREGROUND_SERVICE` | Wake Word常時検知 |
 | `POST_NOTIFICATIONS` | ステータス通知 |
