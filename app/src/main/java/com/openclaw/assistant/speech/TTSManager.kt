@@ -31,15 +31,22 @@ class TTSManager(context: Context) {
             Log.e(TAG, "TTS init callback, status=$status (SUCCESS=${TextToSpeech.SUCCESS})")
             if (status == TextToSpeech.SUCCESS) {
                 isInitialized = true
-                // Force US English
-                val result = tts?.setLanguage(Locale.US)
-                Log.e(TAG, "setLanguage result=$result (forced Locale.US)")
-                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    // Fallback to UK English
-                    tts?.setLanguage(Locale.UK)
+                // Force English by selecting an English voice explicitly
+                val voices = tts?.voices
+                val englishVoice = voices?.firstOrNull { 
+                    it.locale.language == "en" && !it.isNetworkConnectionRequired 
+                } ?: voices?.firstOrNull { it.locale.language == "en" }
+                
+                if (englishVoice != null) {
+                    tts?.voice = englishVoice
+                    Log.e(TAG, "Selected English voice: ${englishVoice.name} (${englishVoice.locale})")
+                } else {
+                    // Fallback to setLanguage
+                    val result = tts?.setLanguage(Locale.US)
+                    Log.e(TAG, "No English voice found, setLanguage result=$result")
                 }
-                // 読み上げ速度調整
-                tts?.setSpeechRate(1.5f)
+                
+                tts?.setSpeechRate(1.2f)
                 tts?.setPitch(1.0f)
                 
                 // 初期化待ちの発話があれば実行
@@ -58,12 +65,21 @@ class TTSManager(context: Context) {
             Log.e(TAG, "TTS retry init callback, status=$status")
             if (status == TextToSpeech.SUCCESS) {
                 isInitialized = true
-                val result = tts?.setLanguage(Locale.US)
-                Log.e(TAG, "setLanguage result=$result (forced Locale.US)")
-                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    tts?.setLanguage(Locale.UK)
+                // Force English by selecting an English voice explicitly
+                val voices = tts?.voices
+                val englishVoice = voices?.firstOrNull { 
+                    it.locale.language == "en" && !it.isNetworkConnectionRequired 
+                } ?: voices?.firstOrNull { it.locale.language == "en" }
+                
+                if (englishVoice != null) {
+                    tts?.voice = englishVoice
+                    Log.e(TAG, "Selected English voice: ${englishVoice.name} (${englishVoice.locale})")
+                } else {
+                    val result = tts?.setLanguage(Locale.US)
+                    Log.e(TAG, "No English voice found, setLanguage result=$result")
                 }
-                tts?.setSpeechRate(1.5f)
+                
+                tts?.setSpeechRate(1.2f)
                 tts?.setPitch(1.0f)
                 pendingSpeak?.invoke()
                 pendingSpeak = null
