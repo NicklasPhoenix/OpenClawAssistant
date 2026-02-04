@@ -4,11 +4,134 @@
   <img src="docs/screenshot.png" width="300" alt="OpenClaw Assistant Screenshot">
 </p>
 
-**OpenClaw専用のAndroid音声アシスタントアプリ** - あなたのAIアシスタントをポケットに。
+**[日本語版はこちら](#日本語) | English below**
 
-## ✨ 機能
+---
 
-- 🎤 **カスタマイズ可能なウェイクワード** - 「Open Claw」「Jarvis」など選択可能、または自由入力
+## English
+
+**Your AI Assistant in Your Pocket** - A dedicated Android voice assistant app for OpenClaw.
+
+### ✨ Features
+
+- 🎤 **Customizable Wake Word** - Choose from "Open Claw", "Jarvis", "Computer", or set your own
+- 🏠 **Long Press Home Button** - Works as a system assistant
+- 🔄 **Continuous Conversation Mode** - Natural dialogue with session persistence
+- 🔊 **Voice Output** - Automatic text-to-speech for AI responses
+- 💬 **In-App Chat** - Hybrid text & voice input
+- 🔒 **Privacy First** - Settings stored with encryption
+- 📴 **Offline Wake Word Detection** - Local processing with Vosk
+
+### 📱 How to Use
+
+1. **Long press Home button** or say the **wake word**
+2. Ask your question or make a request
+3. OpenClaw responds with voice
+4. Continue the conversation (session maintained)
+
+### 🚀 Setup
+
+#### 1. Install the App
+
+Download APK from [Releases](https://github.com/yuga-hashimoto/OpenClawAssistant/releases), or build from source.
+
+#### 2. Configuration
+
+1. Open the app
+2. Tap ⚙️ in the top right to open Settings
+3. Enter:
+   - **Webhook URL** (required): Your OpenClaw endpoint
+   - **Auth Token** (optional): Bearer authentication
+
+#### 3. Wake Word Setup
+
+1. Open "Wake Word" section in Settings
+2. Choose a preset:
+   - **Open Claw** (default)
+   - **Hey Assistant**
+   - **Jarvis**
+   - **Computer**
+   - **Custom...** (enter your own)
+3. Enable the Wake Word toggle on the home screen
+
+#### 4. Set as System Assistant
+
+1. Tap "Home Button" card in the app
+2. Or: Device Settings → Apps → Default Apps → Digital Assistant
+3. Select "OpenClaw Assistant"
+4. Long press Home to activate
+
+### 🔧 OpenClaw Configuration
+
+#### Webhook Example (config.yaml)
+
+```yaml
+hooks:
+  voice:
+    path: /hooks/voice
+    auth:
+      bearer: "your-secret-token"
+```
+
+#### Request Format
+
+```json
+POST /hooks/voice
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "message": "User's spoken text",
+  "session_id": "uuid-xxx-xxx"
+}
+```
+
+#### Response Format
+
+Any of these formats are supported:
+
+```json
+{"response": "Response text"}
+{"text": "Response text"}
+{"message": "Response text"}
+```
+
+### 🛠 Tech Stack
+
+- **UI**: Kotlin + Jetpack Compose + Material 3
+- **Speech Recognition**: Android SpeechRecognizer
+- **Text-to-Speech**: Android TextToSpeech
+- **Wake Word Detection**: [Vosk](https://alphacephei.com/vosk/) (offline)
+- **System Integration**: VoiceInteractionService
+- **Networking**: OkHttp + Gson
+- **Security**: EncryptedSharedPreferences
+
+### 📋 Required Permissions
+
+| Permission | Purpose |
+|------------|---------|
+| `RECORD_AUDIO` | Speech recognition & wake word detection |
+| `INTERNET` | API communication |
+| `FOREGROUND_SERVICE` | Always-on wake word detection |
+| `POST_NOTIFICATIONS` | Status notifications |
+
+### 🤝 Contributing
+
+Pull Requests welcome! Feel free to report issues.
+
+### 📄 License
+
+MIT License - See [LICENSE](LICENSE) for details.
+
+---
+
+## 日本語
+
+**あなたのAIアシスタントをポケットに** - OpenClaw専用のAndroid音声アシスタントアプリ
+
+### ✨ 機能
+
+- 🎤 **カスタマイズ可能なウェイクワード** - 「Open Claw」「Jarvis」「Computer」から選択、または自由入力
 - 🏠 **ホームボタン長押し** - システムアシスタントとして動作
 - 🔄 **連続会話モード** - セッションを維持して自然な対話
 - 🔊 **音声読み上げ** - AIの応答を自動で読み上げ
@@ -16,20 +139,20 @@
 - 🔒 **プライバシー重視** - 設定は暗号化保存
 - 📴 **オフライン対応のウェイクワード検知** - Voskによるローカル処理
 
-## 📱 使い方
+### 📱 使い方
 
 1. **ホームボタン長押し** または **ウェイクワード** を話す
 2. 質問やリクエストを話す
 3. OpenClawが音声で応答
 4. 会話を続ける（セッション維持）
 
-## 🚀 セットアップ
+### 🚀 セットアップ
 
-### 1. アプリのインストール
+#### 1. アプリのインストール
 
 [Releases](https://github.com/yuga-hashimoto/OpenClawAssistant/releases) からAPKをダウンロード、またはソースからビルド。
 
-### 2. 設定
+#### 2. 設定
 
 1. アプリを開く
 2. 右上の⚙️から設定画面へ
@@ -37,7 +160,7 @@
    - **Webhook URL** (必須): OpenClawのエンドポイント
    - **Auth Token** (任意): Bearer認証用
 
-### 3. ウェイクワードの設定
+#### 3. ウェイクワードの設定
 
 1. 設定画面の「Wake Word」セクションを開く
 2. プリセットから選択：
@@ -48,16 +171,16 @@
    - **Custom...** (自由入力)
 3. ホーム画面でWake Wordトグルをオンに
 
-### 4. システムアシスタントとして設定
+#### 4. システムアシスタントとして設定
 
 1. アプリの「Home Button」カードをタップ
 2. または: 端末の設定 → アプリ → デフォルトアプリ → デジタルアシスタント
 3. 「OpenClaw Assistant」を選択
 4. ホームボタン長押しで起動可能に
 
-## 🔧 OpenClaw側の設定
+### 🔧 OpenClaw側の設定
 
-### Webhook設定例 (config.yaml)
+#### Webhook設定例 (config.yaml)
 
 ```yaml
 hooks:
@@ -67,7 +190,7 @@ hooks:
       bearer: "your-secret-token"
 ```
 
-### リクエスト形式
+#### リクエスト形式
 
 ```json
 POST /hooks/voice
@@ -80,7 +203,7 @@ Authorization: Bearer <token>
 }
 ```
 
-### レスポンス形式
+#### レスポンス形式
 
 以下のいずれかの形式をサポート：
 
@@ -90,7 +213,7 @@ Authorization: Bearer <token>
 {"message": "応答テキスト"}
 ```
 
-## 🛠 技術スタック
+### 🛠 技術スタック
 
 - **UI**: Kotlin + Jetpack Compose + Material 3
 - **音声認識**: Android SpeechRecognizer
@@ -100,7 +223,7 @@ Authorization: Bearer <token>
 - **通信**: OkHttp + Gson
 - **セキュリティ**: EncryptedSharedPreferences
 
-## 📋 必要な権限
+### 📋 必要な権限
 
 | 権限 | 用途 |
 |------|------|
@@ -109,11 +232,11 @@ Authorization: Bearer <token>
 | `FOREGROUND_SERVICE` | Wake Word常時検知 |
 | `POST_NOTIFICATIONS` | ステータス通知 |
 
-## 🤝 Contributing
+### 🤝 Contributing
 
 Pull Requests歓迎！Issues報告もお気軽に。
 
-## 📄 ライセンス
+### 📄 ライセンス
 
 MIT License - 詳細は [LICENSE](LICENSE) を参照。
 
