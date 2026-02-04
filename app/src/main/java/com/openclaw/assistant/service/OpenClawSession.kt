@@ -247,7 +247,7 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
                         android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
                 }
 
-                speechManager.startListening("ja-JP").collectLatest { result ->
+                speechManager.startListening("en-US").collectLatest { result ->
                     when (result) {
                         is SpeechResult.Ready -> {
                             currentState.value = AssistantState.LISTENING

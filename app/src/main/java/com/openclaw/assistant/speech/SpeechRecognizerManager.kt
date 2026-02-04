@@ -28,7 +28,7 @@ class SpeechRecognizerManager(private val context: Context) {
     /**
      * 音声認識を開始し、結果をFlowで返す
      */
-    fun startListening(language: String = "ja-JP"): Flow<SpeechResult> = callbackFlow {
+    fun startListening(language: String = "en-US"): Flow<SpeechResult> = callbackFlow {
         // Skip isAvailable() check - MIUI may return false incorrectly
         android.util.Log.e("SpeechRecognizerManager", "startListening called, isAvailable=${isAvailable()}")
 
