@@ -31,12 +31,12 @@ class TTSManager(context: Context) {
             Log.e(TAG, "TTS init callback, status=$status (SUCCESS=${TextToSpeech.SUCCESS})")
             if (status == TextToSpeech.SUCCESS) {
                 isInitialized = true
-                // Use device default locale (usually English/German for EU users)
-                val result = tts?.setLanguage(Locale.getDefault())
-                Log.e(TAG, "setLanguage result=$result (locale=${Locale.getDefault()})")
+                // Force US English
+                val result = tts?.setLanguage(Locale.US)
+                Log.e(TAG, "setLanguage result=$result (forced Locale.US)")
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    // Fallback to US English
-                    tts?.setLanguage(Locale.US)
+                    // Fallback to UK English
+                    tts?.setLanguage(Locale.UK)
                 }
                 // 読み上げ速度調整
                 tts?.setSpeechRate(1.5f)
@@ -58,10 +58,10 @@ class TTSManager(context: Context) {
             Log.e(TAG, "TTS retry init callback, status=$status")
             if (status == TextToSpeech.SUCCESS) {
                 isInitialized = true
-                val result = tts?.setLanguage(Locale.getDefault())
-                Log.e(TAG, "setLanguage result=$result (locale=${Locale.getDefault()})")
+                val result = tts?.setLanguage(Locale.US)
+                Log.e(TAG, "setLanguage result=$result (forced Locale.US)")
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    tts?.setLanguage(Locale.US)
+                    tts?.setLanguage(Locale.UK)
                 }
                 tts?.setSpeechRate(1.5f)
                 tts?.setPitch(1.0f)
