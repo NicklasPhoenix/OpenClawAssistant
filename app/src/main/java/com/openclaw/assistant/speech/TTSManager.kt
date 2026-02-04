@@ -24,69 +24,41 @@ class TTSManager(context: Context) {
     private var pendingSpeak: (() -> Unit)? = null
 
     init {
-        Log.e(TAG, "Initializing TTS...")
-        // Try with explicit engine package name
-        val engine = "com.google.android.tts"
-        tts = TextToSpeech(context.applicationContext, { status ->
+        Log.e(TAG, "Initializing TTS with system default engine...")
+        // Use system default TTS engine (Samsung, Google, whatever is installed)
+        tts = TextToSpeech(context.applicationContext) { status ->
             Log.e(TAG, "TTS init callback, status=$status (SUCCESS=${TextToSpeech.SUCCESS})")
             if (status == TextToSpeech.SUCCESS) {
                 isInitialized = true
-                // Force English by selecting an English voice explicitly
-                val voices = tts?.voices
-                val englishVoice = voices?.firstOrNull { 
-                    it.locale.language == "en" && !it.isNetworkConnectionRequired 
-                } ?: voices?.firstOrNull { it.locale.language == "en" }
-                
-                if (englishVoice != null) {
-                    tts?.voice = englishVoice
-                    Log.e(TAG, "Selected English voice: ${englishVoice.name} (${englishVoice.locale})")
-                } else {
-                    // Fallback to setLanguage
-                    val result = tts?.setLanguage(Locale.US)
-                    Log.e(TAG, "No English voice found, setLanguage result=$result")
-                }
-                
-                tts?.setSpeechRate(1.2f)
-                tts?.setPitch(1.0f)
-                
-                // 初期化待ちの発話があれば実行
+                setupEnglishVoice()
                 pendingSpeak?.invoke()
                 pendingSpeak = null
             } else {
-                Log.e(TAG, "TTS init FAILED with status=$status, trying without engine...")
-                // Retry without specifying engine
-                tryInitWithoutEngine(context.applicationContext)
-            }
-        }, engine)
-    }
-
-    private fun tryInitWithoutEngine(context: Context) {
-        tts = TextToSpeech(context) { status ->
-            Log.e(TAG, "TTS retry init callback, status=$status")
-            if (status == TextToSpeech.SUCCESS) {
-                isInitialized = true
-                // Force English by selecting an English voice explicitly
-                val voices = tts?.voices
-                val englishVoice = voices?.firstOrNull { 
-                    it.locale.language == "en" && !it.isNetworkConnectionRequired 
-                } ?: voices?.firstOrNull { it.locale.language == "en" }
-                
-                if (englishVoice != null) {
-                    tts?.voice = englishVoice
-                    Log.e(TAG, "Selected English voice: ${englishVoice.name} (${englishVoice.locale})")
-                } else {
-                    val result = tts?.setLanguage(Locale.US)
-                    Log.e(TAG, "No English voice found, setLanguage result=$result")
-                }
-                
-                tts?.setSpeechRate(1.2f)
-                tts?.setPitch(1.0f)
-                pendingSpeak?.invoke()
-                pendingSpeak = null
-            } else {
-                Log.e(TAG, "TTS retry also FAILED with status=$status")
+                Log.e(TAG, "TTS init FAILED with status=$status")
             }
         }
+    }
+    
+    private fun setupEnglishVoice() {
+        // Force English by selecting an English voice explicitly
+        val voices = tts?.voices
+        Log.e(TAG, "Available voices: ${voices?.map { "${it.name}(${it.locale})" }}")
+        
+        val englishVoice = voices?.firstOrNull { 
+            it.locale.language == "en" && !it.isNetworkConnectionRequired 
+        } ?: voices?.firstOrNull { it.locale.language == "en" }
+        
+        if (englishVoice != null) {
+            tts?.voice = englishVoice
+            Log.e(TAG, "Selected English voice: ${englishVoice.name} (${englishVoice.locale})")
+        } else {
+            // Fallback to setLanguage
+            val result = tts?.setLanguage(Locale.US)
+            Log.e(TAG, "No English voice found, setLanguage result=$result")
+        }
+        
+        tts?.setSpeechRate(1.2f)
+        tts?.setPitch(1.0f)
     }
 
     /**
