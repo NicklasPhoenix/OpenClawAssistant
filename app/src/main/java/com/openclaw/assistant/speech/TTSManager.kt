@@ -91,11 +91,14 @@ class TTSManager(context: Context) {
         }
 
         if (isInitialized) {
+            // Force English right before speaking
+            tts?.language = Locale.US
             tts?.setOnUtteranceProgressListener(listener)
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
         } else {
             // 初期化待ち - Listenerを保持してpendingSpeakで使用
             pendingSpeak = {
+                tts?.language = Locale.US
                 tts?.setOnUtteranceProgressListener(listener)
                 tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
             }
@@ -142,12 +145,14 @@ class TTSManager(context: Context) {
         }
 
         if (isInitialized) {
+            tts?.language = Locale.US
             tts?.setOnUtteranceProgressListener(listener)
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
             trySend(TTSState.Preparing)
         } else {
             trySend(TTSState.Preparing)
             pendingSpeak = {
+                tts?.language = Locale.US
                 tts?.setOnUtteranceProgressListener(listener)
                 tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
             }
@@ -163,6 +168,7 @@ class TTSManager(context: Context) {
      */
     fun speakQueued(text: String) {
         if (isInitialized) {
+            tts?.language = Locale.US
             val utteranceId = UUID.randomUUID().toString()
             tts?.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId)
         }
