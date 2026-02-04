@@ -119,7 +119,7 @@ To configure OpenClaw for this Android app:
 hooks:
   voice:
     path: /hooks/voice
-    auth:
+    auth:  # optional
       bearer: "<generate-secure-token>"
 ```
 
@@ -130,7 +130,7 @@ ngrok http 18080
 
 3. **Provide to user:**
    - Webhook URL: `https://<ngrok-subdomain>.ngrok.io/hooks/voice`
-   - Auth Token: The bearer token you set
+   - Auth Token: The bearer token you set (optional)
 
 ### Request/Response Format
 
@@ -266,7 +266,7 @@ MIT License - 詳細は [LICENSE](LICENSE) を参照。
 hooks:
   voice:
     path: /hooks/voice
-    auth:
+    auth:  # 任意
       bearer: "<安全なトークンを生成>"
 ```
 
@@ -277,7 +277,7 @@ ngrok http 18080
 
 3. **ユーザーに伝える情報:**
    - Webhook URL: `https://<ngrok-subdomain>.ngrok.io/hooks/voice`
-   - Auth Token: 設定したbearerトークン
+   - Auth Token: 設定したbearerトークン（任意）
 
 ### リクエスト/レスポンス形式
 
